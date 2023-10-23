@@ -1,7 +1,8 @@
 const express = require("express");
-const request = require("request");
+const https = require("https");
 const { config } = require("dotenv");
 const { sendEmailMailGun } = require("../providers/mailgun");
+const { sendEmailNodeMailer } = require("../providers/nodemailer");
 
 config();
 
@@ -11,14 +12,46 @@ const router = express.Router();
 
 router.post("/", async (req, res) => {
   const { sender_email, receiver_email, email_subject, email_body } = req.body;
+  const hostname = domain_mailgun_test;
+  const response = res;
 
-  request(domain_mailgun_test, function (error, response) {
-    if (!error && response.statusCode == 200) {
-      sendEmailMailGun(sender_email, receiver_email, email_subject, email_body);
-    } else {
-      // call other provider
-    }
-  });
+  try {
+    const request = https.request(
+      {
+        hostname: hostname,
+        rejectUnauthorized: false,
+      },
+      async function (res) {
+        if (res.statusCode == 200) {
+          await sendEmailMailGun(
+            sender_email,
+            receiver_email,
+            email_subject,
+            email_body
+          );
+          response.status(200).send({
+            message: `email sent to ${receiver_email}`,
+          });
+        } else {
+          await sendEmailNodeMailer(
+            sender_email,
+            receiver_email,
+            email_subject,
+            email_body
+          );
+          response.status(200).send({
+            message: `email sent to ${receiver_email}`,
+          });
+        }
+      }
+    );
+    request.on("error", (e) => {
+      console.log("Erro: " + e);
+    });
+    request.end();
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 module.exports = (app) => app.use("/send_email", router);
