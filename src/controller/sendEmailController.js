@@ -4,7 +4,6 @@ const { config } = require("dotenv");
 const { sendEmailMailGun } = require("../providers/mailgun");
 const { sendEmailNodeMailer } = require("../providers/nodemailer");
 const { emailValidator } = require("../utils/validators/emailValidator");
-const { ValidatorError } = require("../utils/errors/validatorError");
 
 config();
 
@@ -56,7 +55,9 @@ router.post("/", async (req, res) => {
       console.log(error);
     }
   } else {
-    throw new ValidatorError("Email Invalid");
+    res.status(400).send({
+      message: "Email Invalid",
+    });
   }
 });
 
